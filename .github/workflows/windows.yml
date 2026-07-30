@@ -1,0 +1,138 @@
+name: Windows VST3
+
+# Builds the Windows VST3 with the MSVC toolchain used to ship most JUCE plug-ins,
+# wraps it in the branded Inno Setup installer, and uploads both as artifacts. Runs
+# on every push to main/master and can be triggered by hand from the Actions tab.
+#
+# The MSVC environment is loaded explicitly (msvc-dev-cmd) and the build is driven
+# by Ninja, rather than relying on CMake's Visual Studio generator to locate the
+# toolchain — that detection is brittle across runner-image updates.
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch JUCE
+        run: git clone --depth 1 --branch master https://github.com/juce-framework/JUCE.git JUCE
+
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Set up Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v6
+
+      - name: Configure
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DZSKEYBPM_COPY_AFTER_BUILD=OFF
+          -DZSKEYBPM_BUILD_TESTS=ON
+
+      - name: Build plug-in
+        run: cmake --build build --target ZSkeybpm_VST3
+
+      - name: Build and run DSP checks
+        run: |
+          cmake --build build --target ZSkeybpmTests
+          & "build/ZSkeybpmTests_artefacts/Release/ZSkeybpmTests.exe"
+
+      - name: Stage artifact
+        run: |
+          New-Item -ItemType Directory -Force -Path dist/vst3 | Out-Null
+          Copy-Item -Recurse "build/ZSkeybpm_artefacts/Release/VST3/ZS-keybpm.vst3" dist/vst3/
+
+      # Uploaded before the installer is built: if ISCC ever fails, the plug-in that
+      # did build is still there to download instead of the run yielding nothing.
+      # The path is the staging directory, not the bundle — upload-artifact roots the
+      # zip at a single directory path, which would drop the .vst3 folder itself.
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZS-keybpm-VST3-Windows-x64
+          path: dist/vst3
+          if-no-files-found: error
+
+      - name: Read version
+        id: version
+        shell: pwsh
+        run: |
+          # @() so a single match and no match behave the same way, and a missing
+          # version fails the step instead of quietly shipping an unnamed installer.
+          $match = @(Select-String -Path CMakeLists.txt -Pattern 'project\(ZSkeybpm VERSION ([0-9.]+)')[0]
+
+          if (-not $match) {
+              throw "no project(ZSkeybpm VERSION ...) line in CMakeLists.txt"
+          }
+
+          $value = $match.Matches[0].Groups[1].Value
+          Write-Host "version $value"
+          "value=$value" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          # Inno Setup ships on the windows runner images; the install below is a
+          # fallback for the day it stops doing so.
+          #
+          # Resolved rather than assumed, and by version rather than by presence:
+          # 6.0 to 6.2 install into the same "Inno Setup 6" folder and do not know
+          # the "x64compatible" identifier this script uses, so a Test-Path check
+          # would happily find an ISCC that cannot compile it.
+          $needed = [version]"6.3"
+
+          function Resolve-Iscc {
+              $candidates = @(
+                  (Get-Command iscc -ErrorAction SilentlyContinue).Source
+                  "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+                  "${env:ProgramFiles}\Inno Setup 6\ISCC.exe"
+              ) | Where-Object { $_ -and (Test-Path $_) }
+
+              foreach ($path in $candidates) {
+                  $version = [version](((Get-Item $path).VersionInfo.ProductVersion -split '-')[0])
+                  if ($version -ge $script:needed) { return [pscustomobject]@{ Path = $path; Version = $version } }
+              }
+
+              return $null
+          }
+
+          $iscc = Resolve-Iscc
+
+          if (-not $iscc) {
+              Write-Host "no Inno Setup $needed or newer found — installing"
+              choco install innosetup -y --no-progress
+              $env:PATH = [Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + $env:PATH
+              $iscc = Resolve-Iscc
+          }
+
+          if (-not $iscc) {
+              throw "no Inno Setup $needed or newer available"
+          }
+
+          Write-Host "using ISCC $($iscc.Version) at $($iscc.Path)"
+          $iscc = $iscc.Path
+
+          & $iscc "/DVersion=${{ steps.version.outputs.value }}" `
+                  "/DSourceDir=..\..\dist\vst3" `
+                  "Installer\windows\ZS-keybpm.iss"
+
+          if ($LASTEXITCODE -ne 0) {
+              throw "ISCC failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZS-keybpm-Installer-Windows-x64
+          path: dist/*.exe
+          if-no-files-found: error

@@ -1,0 +1,16 @@
+build/
+build-*/
+dist/
+
+# JUCE is fetched by scripts/build.sh, and may be a symlink to a sibling
+# checkout — "JUCE/" alone would not match that, so anchor the name instead.
+/JUCE
+
+.DS_Store
+*.xcuserdatad
+xcuserdata/
+
+# Intermediates of scripts/brand-art.sh: the installer consumes the .bmp, and the
+# .png it is converted from is regenerated from Tools/RenderArt.cpp on demand.
+Installer/windows/wizard-*.png
+Installer/windows/icon.png

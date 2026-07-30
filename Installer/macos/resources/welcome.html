@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<style>
+    html, body { margin: 0; padding: 0; background: #050505; }
+    body {
+        font: 13px/1.55 -apple-system, "Helvetica Neue", sans-serif;
+        color: #ebe8e0;
+        padding: 22px 24px 24px;
+    }
+    .mark { color: #c9a052; letter-spacing: .34em; font-size: 10px; font-weight: 600; }
+    h1 { font-size: 21px; margin: 10px 0 2px; font-weight: 700; letter-spacing: .01em; }
+    .tag { color: #8b867d; letter-spacing: .22em; font-size: 10px; text-transform: uppercase; }
+    hr { border: 0; border-top: 1px solid #1c1a18; margin: 16px 0; }
+    hr.lead { border-top: 1px solid #c9a052; width: 46px; margin: 14px 0 16px; }
+    p { margin: 0 0 10px; }
+    ul { margin: 6px 0 12px; padding-left: 18px; }
+    li { margin-bottom: 5px; }
+    b { color: #dca55e; font-weight: 600; }
+    .muted { color: #8b867d; }
+    .faint { color: #56514a; font-size: 11px; }
+    code { color: #dca55e; font-family: "SF Mono", Menlo, monospace; font-size: 11.5px; }
+</style>
+</head>
+<body>
+
+<div class="mark">ZS RECORDS</div>
+<h1>ZS-keybpm</h1>
+<div class="tag">Tempo &amp; Key Detector</div>
+<hr class="lead">
+
+<p>Плагин слушает материал и показывает <b>темп</b> и <b>тональность</b>. Сигнал
+проходит через него нетронутым — это измерительный прибор, а не обработка.</p>
+
+<ul>
+    <li><b>Темп</b> считается по самому звуку, а не берётся у хоста: рядом строка
+        HOST с темпом проекта и расхождением, поэтому луп или сэмпл можно проверить,
+        не считая на слух.</li>
+    <li><b>Тональность</b> — по накопленной хроме, с кодом Camelot для сведения и со
+        вторым кандидатом: почти все ошибки определения тональности — это
+        параллельная или одноимённая, и честнее назвать обе.</li>
+    <li><b>Полоса атак</b> внизу показывает, из чего посчитан темп, и найденную сетку
+        бита поверх — показания можно проверить глазами, а не принимать на веру.</li>
+</ul>
+
+<hr>
+
+<p class="muted">Что будет установлено (на следующем шаге можно снять лишнее):</p>
+<ul class="muted">
+    <li><code>/Library/Audio/Plug-Ins/VST3/ZS-keybpm.vst3</code></li>
+    <li><code>/Library/Audio/Plug-Ins/Components/ZS-keybpm.component</code></li>
+    <li><code>/Applications/ZS-keybpm.app</code></li>
+</ul>
+
+<p class="faint">macOS 10.15 и новее · Apple Silicon и Intel · VST3 · AU · Standalone</p>
+
+</body>
+</html>
