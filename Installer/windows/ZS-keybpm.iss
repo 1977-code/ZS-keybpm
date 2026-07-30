@@ -9,7 +9,7 @@
 ; Needs Inno Setup 6.3 or newer: that is where "x64compatible" arrived.
 
 #ifndef Version
-  #define Version "1.0.0"
+  #define Version "1.1.0"
 #endif
 
 #ifndef SourceDir

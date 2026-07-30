@@ -80,8 +80,6 @@ void AnalysisEngine::consume()
         decimated.clear();
     }
 
-    tempo.setPreferredWindow (windowLow.load(), windowHigh.load());
-
     while (! threadShouldExit())
     {
         const auto taken = feed.pop (incoming.data(), chunkSize);

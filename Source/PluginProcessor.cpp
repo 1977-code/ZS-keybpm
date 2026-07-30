@@ -8,7 +8,6 @@ ZsKeyBpmAudioProcessor::ZsKeyBpmAudioProcessor()
                           .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
       apvts (*this, nullptr, "ZSKEYBPM", zs::params::createLayout())
 {
-    rangeParam    = apvts.getRawParameterValue (zs::params::range);
     notationParam = apvts.getRawParameterValue (zs::params::notation);
     holdParam     = apvts.getRawParameterValue (zs::params::hold);
 }
@@ -64,9 +63,6 @@ void ZsKeyBpmAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     }
 
     engine.setHold (holdParam->load() > 0.5f);
-
-    const auto window = zs::params::windowForIndex ((int) rangeParam->load());
-    engine.setPreferredWindow (window.low, window.high);
 
     //--- hand a mono mix to the analyser; the signal itself is left alone ------
     const int channels = juce::jmin (numIn, numOut);

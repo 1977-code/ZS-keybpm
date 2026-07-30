@@ -2,11 +2,14 @@ cmake_minimum_required(VERSION 3.22)
 
 # ─── macOS build settings (must be set before project()) ────────────────────
 if (APPLE)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum macOS version")
+    # 10.13, not 10.15: JUCE 9 itself supports back to 10.11, and a 2012 Mac that
+    # cannot go past Mojave would otherwise be refused by dyld before a line of this
+    # plug-in runs. Apple Silicon starts at 11.0 regardless — CMake handles that.
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS version")
     set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "Build architectures")
 endif ()
 
-project(ZSkeybpm VERSION 1.0.0 LANGUAGES C CXX)
+project(ZSkeybpm VERSION 1.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

@@ -55,17 +55,20 @@ namespace zs::analysis
     inline constexpr float tempoHistogramDecay = 0.986f;
     inline constexpr float tempoHistogramStep  = 0.25f;   // BPM per histogram bin
 
-    /** The four octave windows offered by the Range control. Each is exactly 2:1,
-        so every detected tempo folds into it at one unambiguous value. */
-    struct BpmWindow { float low, high; };
+    inline constexpr int tempoHistogramBins =
+        (int) ((bpmCeiling - bpmFloor) / tempoHistogramStep) + 1;
 
-    inline constexpr std::array<BpmWindow, 4> tempoWindows { {
-        {  60.0f, 120.0f },
-        {  75.0f, 150.0f },
-        {  90.0f, 180.0f },
-        { 110.0f, 220.0f } } };
+    /** Where the ear sits when a piece could be counted at two speeds.
 
-    inline constexpr int defaultTempoWindow = 1;   // 75–150, where most music lives
+        The whole range is always searched; nothing is excluded. But 85 and 170 are
+        the same performance, and when the evidence for both is equally good a
+        listener picks the one nearer a walking pulse. That preference is the
+        resonance curve from the tempo-perception work of Parncutt and Moelants:
+        a Gaussian in log-tempo centred on 120 BPM. One octave away it weighs a
+        candidate down to about a third — a tilt, not a gate, so a genuine 170 BPM
+        track with no half-time evidence still reads 170. */
+    inline constexpr float preferredBpm   = 120.0f;
+    inline constexpr float preferredWidth = 0.7f;   // octaves, one standard deviation
 
     //==========================================================================
     // Chroma and key.

@@ -33,9 +33,10 @@ namespace zs
        move the display, and the reported confidence is simply how much of all the
        evidence gathered agrees — which is what a confidence should mean.
 
-    Only the folding into the preferred octave (60–120, 75–150, …) is a decision
-    the plug-in cannot make on its own: 140 and 70 are the same performance, and
-    which of the two the engineer calls "the tempo" is a matter of taste.
+    The whole 50–215 BPM range is searched at once. Where two speeds are genuinely
+    equally supported — 85 and 170 are the same performance — the tie is broken by
+    the perceptual resonance curve in AnalysisConfig, not by asking the engineer to
+    pick an octave first.
 
     Pure maths, self-contained, and exercised offline against synthetic material.
 */
@@ -48,10 +49,6 @@ public:
 
     /** Feeds analysis-rate samples. */
     void process (const float* samples, int numSamples);
-
-    /** The octave window the reading is folded into. Changing it drops the
-        gathered histogram, since its bins are in folded BPM. */
-    void setPreferredWindow (float lowBpm, float highBpm);
 
     struct Estimate
     {
@@ -118,9 +115,8 @@ private:
     std::vector<float> acf      = std::vector<float> ((size_t) analysis::acfMax + 2, 0.0f);
     std::vector<float> combScore = std::vector<float> ((size_t) analysis::lagMax + 2, 0.0f);
 
-    std::vector<float> histogram;   // folded BPM evidence
-    float histogramLow  = analysis::tempoWindows[analysis::defaultTempoWindow].low;
-    float histogramHigh = analysis::tempoWindows[analysis::defaultTempoWindow].high;
+    // Evidence gathered across the whole range, 0.25 BPM per bin.
+    std::vector<float> histogram = std::vector<float> ((size_t) analysis::tempoHistogramBins, 0.0f);
 
     juce::int64 totalSamples = 0;
     Estimate    estimate;

@@ -20,6 +20,15 @@ namespace
     constexpr float silenceEnergy   = 1.0e-7f;  // ≈ −70 dBFS frame, treated as nothing
     constexpr float logCompression  = 100.0f;
 
+    /** The resonance curve: how willing the ear is to hear a pulse at this speed.
+        A Gaussian in log-tempo around AnalysisConfig's preferred tempo — 1.0 at
+        120 BPM, ≈ 0.36 an octave either side. */
+    float tempoPrior (float bpm) noexcept
+    {
+        const auto octaves = std::log2 (bpm / preferredBpm) / preferredWidth;
+        return std::exp (-0.5f * octaves * octaves);
+    }
+
     float parabolicOffset (float left, float centre, float right) noexcept
     {
         const auto denominator = left - 2.0f * centre + right;
@@ -34,8 +43,6 @@ namespace
 //==============================================================================
 TempoTracker::TempoTracker()
 {
-    setPreferredWindow (tempoWindows[defaultTempoWindow].low,
-                        tempoWindows[defaultTempoWindow].high);
     reset();
 }
 
@@ -60,25 +67,6 @@ void TempoTracker::reset()
     activeFrames = 0;
 
     totalSamples = 0;
-    estimate = {};
-}
-
-void TempoTracker::setPreferredWindow (float lowBpm, float highBpm)
-{
-    if (juce::approximatelyEqual (lowBpm, histogramLow)
-        && juce::approximatelyEqual (highBpm, histogramHigh)
-        && ! histogram.empty())
-        return;
-
-    histogramLow  = lowBpm;
-    histogramHigh = highBpm;
-
-    const auto numBinsNeeded = (int) ((highBpm - lowBpm) / tempoHistogramStep) + 1;
-
-    histogram.assign ((size_t) numBinsNeeded, 0.0f);
-
-    // The gathered evidence was in the old window's folded BPM and means nothing
-    // in the new one.
     estimate = {};
 }
 
@@ -260,6 +248,11 @@ void TempoTracker::runEstimate()
         }
 
         score /= weightSum;
+
+        // Where two speeds are equally supported, sit where the ear sits. This
+        // never excludes a candidate; it only decides ties the way a listener does.
+        score *= tempoPrior ((float) (60.0 * odfRate) / (float) lag);
+
         combScore[(size_t) lag] = score;
         scoreMean += score;
         ++numCandidates;
@@ -296,20 +289,13 @@ void TempoTracker::runEstimate()
         lag += parabolicOffset (combScore[(size_t) (bestLag - 1)], best,
                                 combScore[(size_t) (bestLag + 1)]);
 
-    auto bpm = (float) (60.0 * odfRate) / lag;
-
-    //--- fold into the preferred octave ---------------------------------------
-    while (bpm < histogramLow  - 0.001f) bpm *= 2.0f;
-    while (bpm > histogramHigh + 0.001f) bpm *= 0.5f;
-
-    if (bpm < histogramLow - 0.001f)     // a window narrower than 2:1 could miss
-        return;
+    const auto bpm = (float) (60.0 * odfRate) / lag;
 
     //--- deposit, fade, and read the histogram --------------------------------
     for (auto& bin : histogram)
         bin *= tempoHistogramDecay;
 
-    const auto position = (bpm - histogramLow) / tempoHistogramStep;
+    const auto position = (bpm - bpmFloor) / tempoHistogramStep;
     const auto centre   = juce::jlimit (0, (int) histogram.size() - 1, juce::roundToInt (position));
 
     // Spread over three bins so the centroid moves smoothly rather than in steps.
@@ -352,7 +338,7 @@ void TempoTracker::runEstimate()
     }
 
     const auto centroidBin = weight > 0.0f ? weighted / weight : (float) peakBin;
-    const auto reported    = histogramLow + centroidBin * tempoHistogramStep;
+    const auto reported    = bpmFloor + centroidBin * tempoHistogramStep;
 
     // Confidence is the share of all gathered evidence sitting within ±2 BPM of
     // the reading — how much of what has been heard actually agrees.

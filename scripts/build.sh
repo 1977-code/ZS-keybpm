@@ -17,6 +17,19 @@ zs_fetch_juce
 want_tests=0
 [[ "${1:-}" == "--tests" ]] && want_tests=1
 
+# CMAKE_OSX_DEPLOYMENT_TARGET is a cache variable, so an existing build directory
+# keeps whatever it was first configured with — raise the minimum in CMakeLists.txt
+# and the binary silently keeps the old one, which is exactly the kind of bug that
+# only shows up on someone else's older Mac. Reconfigure from scratch when they
+# disagree.
+wanted="$(sed -n 's/.*CMAKE_OSX_DEPLOYMENT_TARGET "\([0-9.]*\)".*/\1/p' CMakeLists.txt | head -1)"
+cached="$(sed -n 's/^CMAKE_OSX_DEPLOYMENT_TARGET:STRING=//p' build/CMakeCache.txt 2>/dev/null | head -1)"
+
+if [[ -n "$wanted" && -n "$cached" && "$wanted" != "$cached" ]]; then
+    echo "deployment target changed ($cached → $wanted) — reconfiguring from scratch"
+    rm -rf build
+fi
+
 cmake -B build -G "Unix Makefiles" \
       -DCMAKE_BUILD_TYPE=Release \
       -DZSKEYBPM_COPY_AFTER_BUILD=ON \

@@ -80,12 +80,6 @@ public:
     /** Freezes the published reading; analysis carries on underneath. */
     void setHold (bool shouldHold) noexcept { hold.store (shouldHold); }
 
-    void setPreferredWindow (float lowBpm, float highBpm) noexcept
-    {
-        windowLow.store (lowBpm);
-        windowHigh.store (highBpm);
-    }
-
     /** Throws away everything heard so far and starts listening afresh. */
     void requestReset() noexcept { resetPending.store (true); }
 
@@ -108,8 +102,6 @@ private:
 
     std::atomic<bool>  hold { false };
     std::atomic<bool>  resetPending { false };
-    std::atomic<float> windowLow  { analysis::tempoWindows[analysis::defaultTempoWindow].low };
-    std::atomic<float> windowHigh { analysis::tempoWindows[analysis::defaultTempoWindow].high };
     std::atomic<float> signalLevel { 0.0f };
 
     double sampleRate = 48000.0;

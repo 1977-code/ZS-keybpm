@@ -43,10 +43,39 @@ ZS_INSTALLER_ID="Developer ID Installer: … (TEAMID)" \
 ./scripts/package-macos.sh
 ```
 
+### Если плагин не появился или хост пишет «crashed validation»
+
+Установщик не подписан сертификатом Apple, поэтому на чужой машине бывает два
+препятствия, и оба лечатся за секунду.
+
+**Карантин.** Файл, пришедший через мессенджер или браузер, macOS помечает
+атрибутом `com.apple.quarantine`, и Gatekeeper не даёт хосту загрузить бандл —
+в Logic это выглядит как `crashed validation`. Снять:
+
+```bash
+sudo xattr -dr com.apple.quarantine \
+    /Library/Audio/Plug-Ins/VST3/ZS-keybpm.vst3 \
+    /Library/Audio/Plug-Ins/Components/ZS-keybpm.component \
+    /Applications/ZS-keybpm.app
+```
+
+После этого в Logic: **Настройки → Плагины → Сбросить и пересканировать**.
+
+**Версия macOS.** Плагин собирается с минимумом macOS 10.13 (High Sierra) для
+Intel и 11.0 для Apple Silicon — иначе загрузчик отказывает ещё до кода плагина,
+и это тоже выглядит как краш валидации. Проверить, что именно объявляет бинарник:
+
+```bash
+otool -l /Library/Audio/Plug-Ins/Components/ZS-keybpm.component/Contents/MacOS/ZS-keybpm | grep -A3 -E "LC_VERSION_MIN_MACOSX|LC_BUILD_VERSION"
+```
+
+Проверить сам плагин вне хоста — `auval -v aufx Zkbp ZSRc`: он печатает причину
+отказа подробнее, чем менеджер плагинов.
+
 Установщик для Windows собирает CI (см. ниже) либо Inno Setup 6 вручную:
 
 ```bat
-iscc /DVersion=1.0.0 /DSourceDir=..\..\dist\vst3 Installer\windows\ZS-keybpm.iss
+iscc /DVersion=1.1.0 /DSourceDir=..\..\dist\vst3 Installer\windows\ZS-keybpm.iss
 ```
 
 ---
@@ -116,7 +145,7 @@ lock-free очередь, а всё остальное происходит на
 Source/
   PluginProcessor.*     проброс звука + чтение темпа хоста
   PluginEditor.*        один таймер кормит все показания одним снимком
-  Parameters.h          три параметра: range, notation, hold
+  Parameters.h          два параметра: notation, hold
   KeyNames.h            имена тональностей и коды Camelot
   dsp/
     AnalysisConfig.h    все константы анализа, без JUCE — их видят и тесты
@@ -136,6 +165,12 @@ Tools/RenderArt.cpp     вся брендовая графика рисуетс�
 половине — восьмые в хэте превращают 128 в 256. Здесь каждый кандидат оценивается
 вместе с тремя своими кратными: выигрывает тот период, у которого присутствует весь
 гармонический ряд, а это бит, а не его дробление.
+
+Диапазон не выбирается руками: ищется сразу весь, 50–215 BPM. Там, где данные
+одинаково поддерживают обе скорости — 85 и 170 это одно и то же исполнение, —
+выбор делает кривая слухового резонанса (Parncutt, Moelants): гауссиана по
+логарифму темпа вокруг 120 BPM. Это наклон, а не фильтр: на 62 BPM, где никаких
+данных за 124 нет, показание остаётся 62.
 
 **Дёргающееся показание.** Оценка не показывается напрямую: каждые полсекунды она
 кладётся в затухающую гистограмму с весом своей уверенности, а на экране —

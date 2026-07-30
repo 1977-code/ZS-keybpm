@@ -41,17 +41,16 @@ namespace zs::layout
     inline constexpr int buttonY   = 440;
     inline constexpr int buttonH   = 44;
 
-    inline juce::Rectangle<int> rangeZone()    { return { margin, controlsY, 328, controlsH }; }
-    inline juce::Rectangle<int> notationZone() { return { 404,    controlsY, 156, controlsH }; }
-    inline juce::Rectangle<int> holdZone()     { return { 608,    controlsY, 104, controlsH }; }
-    inline juce::Rectangle<int> resetZone()    { return { 760,    controlsY, 112, controlsH }; }
+    // Three zones, centred on the canvas: notation, the readout freeze, and reset.
+    inline juce::Rectangle<int> notationZone() { return { 184, controlsY, 156, controlsH }; }
+    inline juce::Rectangle<int> holdZone()     { return { 404, controlsY, 124, controlsH }; }
+    inline juce::Rectangle<int> resetZone()    { return { 592, controlsY, 124, controlsH }; }
 
-    inline juce::Rectangle<int> rangeStripBounds()    { return { margin, buttonY, 328, buttonH }; }
-    inline juce::Rectangle<int> notationStripBounds() { return { 404,    buttonY, 156, buttonH }; }
-    inline juce::Rectangle<int> holdButtonBounds()    { return { 608,    buttonY, 104, buttonH }; }
-    inline juce::Rectangle<int> resetButtonBounds()   { return { 760,    buttonY, 112, buttonH }; }
+    inline juce::Rectangle<int> notationStripBounds() { return { 184, buttonY, 156, buttonH }; }
+    inline juce::Rectangle<int> holdButtonBounds()    { return { 404, buttonY, 124, buttonH }; }
+    inline juce::Rectangle<int> resetButtonBounds()   { return { 592, buttonY, 124, buttonH }; }
 
-    inline constexpr std::array<int, 3> dividerXs { 380, 584, 736 };
+    inline constexpr std::array<int, 2> dividerXs { 372, 560 };
 
     inline constexpr int footerLine = 508;
 }

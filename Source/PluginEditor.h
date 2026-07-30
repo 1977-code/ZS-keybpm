@@ -50,7 +50,7 @@ private:
         zs::KeyReadout      key;
         zs::ChromaWheel     wheel;
         zs::BeatStrip       strip;
-        zs::ChoiceStrip     rangeStrip, notationStrip;
+        zs::ChoiceStrip     notationStrip;
         juce::TextButton    holdButton { "Hold" }, resetButton { "Reset" };
         juce::ButtonParameterAttachment holdAttachment;
 

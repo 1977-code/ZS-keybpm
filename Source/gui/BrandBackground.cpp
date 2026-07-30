@@ -179,7 +179,6 @@ void BrandBackground::renderStaticLayer()
         g.setFont (blockCaption);
         g.setColour (theme::textMuted);
 
-        g.drawText ("TEMPO RANGE", layout::rangeZone().withHeight (14),    Justification::centred, false);
         g.drawText ("NOTATION",    layout::notationZone().withHeight (14), Justification::centred, false);
         g.drawText ("READOUT",     layout::holdZone().withHeight (14),     Justification::centred, false);
         g.drawText ("ANALYSIS",    layout::resetZone().withHeight (14),    Justification::centred, false);
@@ -189,8 +188,6 @@ void BrandBackground::renderStaticLayer()
         g.setFont (hint);
         g.setColour (theme::textFaint);
 
-        g.drawText ("REPORTED OCTAVE", layout::rangeZone().getX(), 488,
-                    layout::rangeZone().getWidth(), 12, Justification::centred, false);
         g.drawText ("FREEZE", layout::holdZone().getX(), 488,
                     layout::holdZone().getWidth(), 12, Justification::centred, false);
         g.drawText ("START OVER", layout::resetZone().getX(), 488,

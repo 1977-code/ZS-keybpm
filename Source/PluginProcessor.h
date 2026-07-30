@@ -70,7 +70,6 @@ public:
 private:
     zs::AnalysisEngine engine;
 
-    std::atomic<float>* rangeParam    = nullptr;
     std::atomic<float>* notationParam = nullptr;
     std::atomic<float>* holdParam     = nullptr;
 

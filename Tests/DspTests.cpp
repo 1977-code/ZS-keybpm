@@ -137,6 +137,33 @@ namespace
         return out;
     }
 
+    /** Identical hits on every beat — four on the floor, where the beat level is
+        not in question and only the octave is. */
+    std::vector<float> evenLoop (double bpm, double seconds, double sampleRate)
+    {
+        std::vector<float> out ((size_t) (seconds * sampleRate), 0.0f);
+
+        const auto beat = 60.0 / bpm;
+        std::mt19937 noise (1977);
+        std::uniform_real_distribution<float> uniform (-1.0f, 1.0f);
+
+        for (int index = 0; (double) index * beat < seconds; ++index)
+        {
+            const auto start = (size_t) ((double) index * beat * sampleRate);
+
+            for (size_t i = 0; i + start < out.size() && i < (size_t) (0.2 * sampleRate); ++i)
+            {
+                const auto t = (double) i / sampleRate;
+                const auto shape = std::exp (-t * 26.0);
+                const auto tone = std::sin (2.0 * juce::MathConstants<double>::pi * 60.0 * t);
+
+                out[start + i] += 0.85f * (float) shape * (float) (tone * 0.75 + uniform (noise) * 0.25);
+            }
+        }
+
+        return out;
+    }
+
     struct Chord
     {
         std::vector<int> notes;   // MIDI numbers
@@ -202,15 +229,12 @@ namespace
     }
 
     //==========================================================================
-    zs::TempoTracker::Estimate detectTempo (const std::vector<float>& audio, double sampleRate,
-                                            int windowIndex = zs::analysis::defaultTempoWindow)
+    zs::TempoTracker::Estimate detectTempo (const std::vector<float>& audio, double sampleRate)
     {
         zs::Decimator decimator;
         decimator.prepare (sampleRate);
 
         zs::TempoTracker tracker;
-        tracker.setPreferredWindow (zs::analysis::tempoWindows[(size_t) windowIndex].low,
-                                    zs::analysis::tempoWindows[(size_t) windowIndex].high);
 
         std::vector<float> decimated;
         decimated.reserve (blockSize);
@@ -345,11 +369,26 @@ int main()
     }
 
     {
-        // Same performance, reported in the octave the user asked for: 110–220.
-        const auto estimate = detectTempo (drumLoop (90.0, 20.0, 44100.0, false), 44100.0, 3);
+        // There is no range control any more: the whole 50-215 BPM span is searched
+        // in one pass. Where the evidence is symmetric — every multiple of the beat
+        // correlates just as well — the perceptual prior settles the octave, and a
+        // four-on-the-floor 150 is a 150 to any listener, not a 75.
+        const auto estimate = detectTempo (evenLoop (150.0, 20.0, 44100.0), 44100.0);
 
-        check (std::abs (estimate.bpm - 180.0f) < 3.0f,
-               "a 90 BPM loop folds to 180 in the 110-220 window", juce::String (estimate.bpm, 2));
+        check (std::abs (estimate.bpm - 150.0f) < 2.0f,
+               "an even 150 BPM loop reads 150, not half of it",
+               juce::String (estimate.bpm, 2));
+    }
+
+    {
+        // The mirror image: the prior leans towards 120, so a slow loop is the case
+        // where it could do damage. It must not — 62 has no evidence at 124, and a
+        // tilt is not a gate.
+        const auto estimate = detectTempo (evenLoop (62.0, 22.0, 44100.0), 44100.0);
+
+        check (std::abs (estimate.bpm - 62.0f) < 2.0f,
+               "...and an even 62 BPM loop reads 62, not double",
+               juce::String (estimate.bpm, 2));
     }
 
     {

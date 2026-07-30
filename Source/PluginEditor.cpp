@@ -26,10 +26,6 @@ namespace
         "Если риски стоят на пиках, темп верный. Точка справа пульсирует в такт и замирает вместе "
         "с транспортом.");
 
-    const String rangeTip = String::fromUTF8 (
-        "В какой октаве показывать темп. 140 и 70 — одно и то же исполнение, и какой из них "
-        "называть темпом, решает не плагин. Диапазон ровно 2:1, поэтому ответ всегда один.");
-
     const String notationTip = String::fromUTF8 (
         "Писать через диезы или бемоли: F# или Gb.");
 
@@ -46,7 +42,6 @@ namespace
 ZsKeyBpmAudioProcessorEditor::Content::Content (ZsKeyBpmAudioProcessor& p)
     : plugin (p),
       background (String ("v") + JucePlugin_VersionString),
-      rangeStrip    (*p.apvts.getParameter (zs::params::range)),
       notationStrip (*p.apvts.getParameter (zs::params::notation)),
       holdAttachment (*p.apvts.getParameter (zs::params::hold), holdButton, nullptr)
 {
@@ -58,7 +53,6 @@ ZsKeyBpmAudioProcessorEditor::Content::Content (ZsKeyBpmAudioProcessor& p)
     addAndMakeVisible (key);
     addAndMakeVisible (wheel);
     addAndMakeVisible (strip);
-    addAndMakeVisible (rangeStrip);
     addAndMakeVisible (notationStrip);
     addAndMakeVisible (holdButton);
     addAndMakeVisible (resetButton);
@@ -67,7 +61,6 @@ ZsKeyBpmAudioProcessorEditor::Content::Content (ZsKeyBpmAudioProcessor& p)
     key.setTooltip (keyTip);
     wheel.setTooltip (wheelTip);
     strip.setTooltip (stripTip);
-    rangeStrip.setTooltipForAll (rangeTip);
     notationStrip.setTooltipForAll (notationTip);
     holdButton.setTooltip (holdTip);
     resetButton.setTooltip (resetTip);
@@ -86,7 +79,6 @@ void ZsKeyBpmAudioProcessorEditor::Content::resized()
     key.setBounds (keyReadoutBounds());
     strip.setBounds (stripBounds());
 
-    rangeStrip.setBounds (rangeStripBounds());
     notationStrip.setBounds (notationStripBounds());
     holdButton.setBounds (holdButtonBounds());
     resetButton.setBounds (resetButtonBounds());
