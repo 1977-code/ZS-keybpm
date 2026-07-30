@@ -82,56 +82,45 @@ jobs:
       - name: Build installer
         shell: pwsh
         run: |
-          # Inno Setup ships on the windows runner images, but neither at a path worth
-          # hardcoding nor reliably on PATH — the MSVC dev environment rewrites PATH
-          # before this step runs. So ISCC is searched for, and the search is printed:
-          # if a future image moves it again, the log says where it went instead of
-          # only that it was not found.
+          # Inno Setup ships on the windows runner images, but not reliably on PATH —
+          # the MSVC dev environment rewrites PATH before this step runs. So ISCC is
+          # searched for, and every candidate is printed: if a future image moves it,
+          # the log says where it went instead of only that it was missing.
           #
-          # Version, not mere presence: 6.0 to 6.2 live in the same "Inno Setup 6"
-          # folder and do not know the "x64compatible" identifier this script uses.
-          $needed = [version]"6.3"
-
+          # Not version-gated. ISCC.exe carries no file version (it reports 0.0.0.0),
+          # so any such check rejects a perfectly good compiler. The script needs
+          # Inno Setup 6.3 or newer for "x64compatible"; an older one fails right
+          # below with ISCC's own unambiguous message about the identifier.
           function Find-Iscc {
+              # The real executable ahead of the chocolatey shim, and PATH last.
               $candidates = @(
-                  (Get-Command iscc.exe -ErrorAction SilentlyContinue | ForEach-Object Source)
-                  (Get-ChildItem -Path "C:\Program Files", "C:\Program Files (x86)" `
+                  (Get-ChildItem -Path "C:\Program Files (x86)", "C:\Program Files" `
                                  -Filter "Inno Setup*" -Directory -ErrorAction SilentlyContinue |
                        ForEach-Object { Join-Path $_.FullName "ISCC.exe" })
                   "C:\ProgramData\chocolatey\bin\ISCC.exe"
+                  (Get-Command iscc.exe -ErrorAction SilentlyContinue | ForEach-Object Source)
               ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -Unique
 
-              $best = $null
+              foreach ($path in $candidates) { Write-Host "  found $path" }
 
-              foreach ($path in $candidates) {
-                  $raw = (Get-Item $path).VersionInfo.ProductVersion
-                  $version = try { [version](($raw -split '[-+ ]')[0]) } catch { $null }
-
-                  Write-Host "  found $path  ($raw)"
-
-                  if ($version -and $version -ge $needed -and -not $best) {
-                      $best = [pscustomobject]@{ Path = $path; Version = $version }
-                  }
-              }
-
-              return $best
+              return $candidates | Select-Object -First 1
           }
 
           Write-Host "looking for ISCC:"
           $iscc = Find-Iscc
 
           if (-not $iscc) {
-              Write-Host "nothing usable — installing Inno Setup"
-              choco install innosetup -y --no-progress --force
+              Write-Host "not found — installing Inno Setup"
+              choco install innosetup -y --no-progress
               $iscc = Find-Iscc
           }
 
           if (-not $iscc) {
-              throw "no Inno Setup $needed or newer available"
+              throw "no ISCC.exe anywhere — Inno Setup 6.3+ is required to build the installer"
           }
 
-          Write-Host "using ISCC $($iscc.Version) at $($iscc.Path)"
-          $iscc = $iscc.Path
+          Write-Host "using $iscc"
+          & $iscc /? 2>&1 | Select-Object -First 1 | ForEach-Object { Write-Host "  $_" }
 
           & $iscc "/DVersion=${{ steps.version.outputs.value }}" `
                   "/DSourceDir=..\..\dist\vst3" `
